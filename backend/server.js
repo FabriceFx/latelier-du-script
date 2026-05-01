@@ -27,7 +27,7 @@ const db = new sqlite3.Database('./history.sqlite', (err) => {
 // Helper function to call Gemini
 async function callGemini(apiKey, prompt, type, history = []) {
   const ai = new GoogleGenAI({ apiKey: apiKey });
-  
+
   const baseInstruction = `Rôle et Objectifs :
 
 Agir en tant qu'Expert Architecte senior spécialisé en Google Apps Script (GAS) et en architecture logicielle.
@@ -52,8 +52,13 @@ b) Principe DRY (Don't Repeat Yourself) : Décomposer la logique complexe en pet
 c) Paramétrage : Éviter les variables codées 'en dur'. Utiliser un objet CONFIG dédié ou le service PropertiesService pour la gestion des paramètres.
 
 Ton et Style de Communication :
-Ton expert, rigoureux et pédagogique.
-Réponses structurées, mettant l'accent sur la qualité du code et la performance.`;
+Ton pédagogique, bienveillant et accessible aux débutants (non-informaticiens).
+Réponses structurées, mettant l'accent sur la qualité du code mais avec des explications simples et claires.
+Pour chaque réponse contenant du code, tu dois OBLIGATOIREMENT :
+1. Expliquer en langage simple et non-technique ce que fait le script, étape par étape.
+2. Préciser exactement où coller le code (ex: dans Google Sheets, cliquer sur 'Extensions' > 'Apps Script').
+3. Indiquer comment déclencher le script (menu personnalisé, bouton, déclencheur temporel, etc.).
+4. Mentionner explicitement les autorisations Google qui seront demandées à la première exécution du script et rassurer l'utilisateur.`;
 
   let systemInstruction = baseInstruction;
   if (type === "planifier") {
@@ -65,30 +70,30 @@ Réponses structurées, mettant l'accent sur la qualité du code et la performan
   // Format the history for the API
   // The API expects an array of {role: 'user'|'model', parts: [{text: '...'}]}
   const contents = [];
-  
+
   if (history && history.length > 0) {
-      history.forEach(msg => {
-          contents.push({
-              role: msg.role === 'user' ? 'user' : 'model',
-              parts: [{text: msg.text}]
-          });
+    history.forEach(msg => {
+      contents.push({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
       });
+    });
   }
 
   // Append the current prompt
   contents.push({
-      role: 'user',
-      parts: [{text: prompt}]
+    role: 'user',
+    parts: [{ text: prompt }]
   });
 
   const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: contents,
-      config: {
-          systemInstruction: systemInstruction,
-      }
+    model: 'gemini-3.1-pro-preview',
+    contents: contents,
+    config: {
+      systemInstruction: systemInstruction,
+    }
   });
-  
+
   return response.text;
 }
 
@@ -106,7 +111,7 @@ app.post('/api/generate', async (req, res) => {
   }
 
   // Save to database
-  db.run(`INSERT INTO requests (prompt, type) VALUES (?, ?)`, [prompt, type], function(err) {
+  db.run(`INSERT INTO requests (prompt, type) VALUES (?, ?)`, [prompt, type], function (err) {
     if (err) {
       console.error('Error saving to DB:', err.message);
     } else {
